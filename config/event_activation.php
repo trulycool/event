@@ -9,9 +9,9 @@
  * @license  http://www.opensource.org/licenses/mit-license.php The MIT License
  * @link     http://www.tigerclawtech.com/portfolio/croogo-event-plugin
  */
-class EventActivation{
+class EventActivation {
 
-	public $version = '1.0';
+	public $version = '1.0.1';
 
 /**
  * onActivate will be called if this returns true
@@ -20,6 +20,45 @@ class EventActivation{
  * @return boolean
  */
     public function beforeActivation(&$controller) {
+        $current_version  = Configure::read('Event.version');
+        if($this->version != $current_version){
+                switch($this->version){
+                        case '1.0.1':
+                        default:
+                        // Add a table to the DB
+                        App::import('Core', 'File');
+                        App::import('Model', 'CakeSchema', false);
+                                App::import('Model', 'ConnectionManager');
+
+                                $db = ConnectionManager::getDataSource('default');
+                                if(!$db->isConnected()) {
+                                                $this->Session->setFlash(__('Could not connect to database.', true));
+                                        } else {
+                                                $schema =& new CakeSchema(array('plugin'=>'event','name'=>'event'));
+                                                $schema = $schema->load();
+                                                foreach($schema->tables as $table => $fields) {
+                                                        $create = $db->createSchema($schema, $table);
+                                                        $db->execute($create);
+                                                } 
+                                }      
+
+                        // Main menu: add an Example link
+                        $mainMenu = $controller->Link->Menu->findByAlias('main');
+                        $controller->Link->Behaviors->attach('Tree', array(
+                            'scope' => array(
+                                'Link.menu_id' => $mainMenu['Menu']['id'],
+                            ),
+                        ));
+                        $controller->Link->save(array(
+                            'menu_id' => $mainMenu['Menu']['id'],
+                            'title' => 'Events',
+                            'link' => 'plugin:event/controller:event/action:index',
+                            'status' => 1,
+                        ));
+                        break;
+        }
+                $controller->Setting->write('Event.version', $this->version, array('editable' => 0, 'title' => 'Version'));
+        }
         return true;
     }/**
  * Called after activating the hook in ExtensionsHooksController::admin_toggle()
@@ -32,47 +71,7 @@ class EventActivation{
         $controller->Croogo->addAco('Event'); // ExampleController
         $controller->Croogo->addAco('Event/admin_index'); // ExampleController::admin_index()
         $controller->Croogo->addAco('Event/index', array('registered', 'public')); // ExampleController::index()
-        $controller->Croogo->addAco('Event/calendar', array('registered', 'public')); // ExampleController::index()
-        
-		$current_version  = Configure::read('Event.version');
-		if($this->version != $current_version){
-			switch($this->version){
-				case '1.0':
-				default:
-			        // Add a table to the DB
-			        App::import('Core', 'File');
-			        App::import('Model', 'CakeSchema', false);
-					App::import('Model', 'ConnectionManager');
-			
-					$db = ConnectionManager::getDataSource('default');
-					if(!$db->isConnected()) {
-							$this->Session->setFlash(__('Could not connect to database.', true));
-						} else {
-							$schema =& new CakeSchema(array('plugin'=>'event','name'=>'event'));
-							$schema = $schema->load();
-							foreach($schema->tables as $table => $fields) {
-								$create = $db->createSchema($schema, $table);
-								$db->execute($create);
-							} 
-					}      
-			        
-			        // Main menu: add an Example link
-			        $mainMenu = $controller->Link->Menu->findByAlias('main');
-			        $controller->Link->Behaviors->attach('Tree', array(
-			            'scope' => array(
-			                'Link.menu_id' => $mainMenu['Menu']['id'],
-			            ),
-			        ));
-			        $controller->Link->save(array(
-			            'menu_id' => $mainMenu['Menu']['id'],
-			            'title' => 'Events',
-			            'link' => 'plugin:event/controller:event/action:index',
-			            'status' => 1,
-			        ));
-				break;
-	        }
-			$controller->Setting->write('Event.version', $this->version, array('editable' => 0, 'title' => 'Version'));
-		}
+        $controller->Croogo->addAco('Event/calendar', array('registered', 'public')); // ExampleController::index()        
      }
 /**
  * onDeactivate will be called if this returns true

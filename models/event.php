@@ -1,5 +1,5 @@
 <?php
-class Event extends EventAppModel{
+class Event extends AppModel{
 	var $name = 'Event';
 	
 	var $belongsTo = array(
